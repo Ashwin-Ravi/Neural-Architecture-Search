@@ -1,13 +1,14 @@
 import tkinter
 from tkinter import *
 from tkinter import ttk
+from tkinter import filedialog
 from PIL import Image, ImageTk
 from tkinter.filedialog import askopenfilename
 import os
 
 
 
-def trainSearch():
+def trainSearch(data_path):
     global batch_size #160
     global epoch #150
     global num_layer #6
@@ -20,7 +21,7 @@ def trainSearch():
     model = "search_cifar10"
     MODEL_DIR = "NAO/NAO-WS/cnn/models/$MODEL"
     LOG_DIR = "NAO/NAO-WS/cnn/logs"
-    DATA_DIR= "NAO/NAO-WS/cnn/data/cifar10"
+    DATA_DIR= data_path
     run_str = "python ./NAO/NAO-WS/cnn/train_search.py --child_data_format='NCHW' --data_path=" + DATA_DIR+" --output_dir=" + MODEL_DIR +" --child_sample_policy=uniform --child_batch_size="+str(batch_size.get())+" --child_num_epochs="+str(epoch.get())+" --child_eval_every_epochs=30 --child_use_aux_heads --child_num_layers="+str(num_layer.get())+" --child_out_filters=20 --child_l2_reg=1e-4 --child_num_cells="+str(num_cells.get())+" --child_keep_prob=0.90 --child_drop_path_keep_prob=0.60 --child_lr_cosine --child_lr_max=0.05 --child_lr_min=0.0005 --child_lr_T_0=10 --child_lr_T_mul=2 --child_eval_batch_size=500 --controller_encoder_vocab_size=12 --controller_decoder_vocab_size=12 --controller_encoder_emb_size=48 --controller_encoder_hidden_size=96 --controller_decoder_hidden_size=96 --controller_mlp_num_layers=3 --controller_mlp_hidden_size=100 --controller_mlp_dropout=0.1 --controller_source_length=40 --controller_encoder_length=20 --controller_decoder_length=40 --controller_train_epochs=1000 --controller_optimizer=adam --controller_lr=0.001 --controller_batch_size=100 --controller_save_frequency=100 --controller_attention --controller_time_major --controller_symmetry 2>&1 | tee -a NAO/NAO-WS/cnn/logs/train.search_cifar10.log"
 
     os.system(run_str)
@@ -46,17 +47,26 @@ lbl.grid(column=0, row=0)
 v = tkinter.IntVar()
 v.set(10)
 
+data_path_arr = ["NAO/NAO-WS/cnn/data/cifar10", "NAO/NAO-WS/cnn/data/cifar100", ""]
+folder_path = StringVar()
+def browse_button():
+    # Allow user to select a directory and store it in global var
+    # called folder_path
+    global folder_path
+    global data_path_arr
+    filename = filedialog.askdirectory()
+    folder_path.set(filename)
+    data_path_arr[2] = str(filename)
+
 rad1 = Radiobutton(tab1,text='CIFAR-10', variable=v, value=0)
-#rad2 = Radiobutton(tab1,text='MNIST', variable=v, value=1)
-#rad3 = Radiobutton(tab1,text='CIFAR-100', variable=v, value=2)
-#rad4 = Radiobutton(tab1,text='Custom Dataset', variable=v, value=3)
-browse_button = Button(tab1, text ='Browse')
+rad2 = Radiobutton(tab1,text='CIFAR-100', variable=v, value=1)
+rad3 = Radiobutton(tab1,text='Custom Dataset', variable=v, value=2)
+browse_button = Button(tab1, text ='Browse', command = browse_button)
 
 rad1.grid(column=0, row=1, sticky="W")
-#rad2.grid(column=0, row=2, sticky="W")
-#rad3.grid(column=0, row=3, sticky="W")
-#rad4.grid(column=0, row=4, sticky="W")
-#browse_button.grid(column=1, row=4)
+rad2.grid(column=0, row=2, sticky="W")
+rad3.grid(column=0, row=3, sticky="W")
+browse_button.grid(column=1, row=3)
 
 
 batch_size = StringVar()
@@ -96,8 +106,11 @@ txt2a = Entry(tab1,width=4, textvariable = num_cells)
 txt2a.grid(column=4, row=4, sticky="W")
 
 def loadData():
-    data_arr = ['./CIFAR.png','MNIST.png','./CIFAR100.png','./CIFAR100.png']
-    load = Image.open(data_arr[v.get()])
+    data_arr = ['./CIFAR.png', './CIFAR100.png', './CIFAR100.png']
+    global data_path_arr
+    rad_num = v.get()
+    data_path = data_path_arr[rad_num]
+    load = Image.open(data_arr[rad_num])
     w, h = load.size
     load = load.resize((5*w, 5*h))
     imgfile = ImageTk.PhotoImage(load )
@@ -130,14 +143,18 @@ def searchArch():
     t_status.delete(0.0, tkinter.END)
     t_status.insert('insert', textvar+'Searching for optimal architectures')
     t_status.update()
-    trainSearch()
+    global data_path_arr
+    rad_num = v.get()
+    data_path = data_path_arr[rad_num]
+    trainSearch(data_path)
+    t_status.insert('insert', textvar+'Done. Check output / error log')
     
 
 search_button = Button(tab1, text ='Search Architecture', command = searchArch)
 # search_button = Button(window, text ='Load Data', command = loadData)
 search_button.grid(column=5, row=5, pady=50)
 
-lbl6 = Label(tab1, text="Optimal Neural Architecture Cell Structure")
+lbl6 = Label(tab1, text="Search status")
 lbl6.grid(column=6, row=7, sticky="W")
 
 
@@ -181,6 +198,7 @@ def finalSearch():
     t2_status.insert('insert', textvar+'Training Discovered Architectures')
     t2_status.update()
     trainFinal()
+    t2_status.insert('insert', textvar+'Done. Check output / error log')
 
 final_batch_size = StringVar()
 final_epoch = StringVar()
@@ -249,6 +267,7 @@ def finalTest():
     t3_status.insert('insert', textvar+'Testing Architecture')
     t3_status.update()
     test()
+    t3_status.insert('insert', textvar+'Done. Check output / error log')
 
 test_batch_size = StringVar()
 test_epoch = StringVar()
